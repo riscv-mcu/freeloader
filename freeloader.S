@@ -6,18 +6,38 @@
 .global _start
 .section .text
 _start:
+	/* configure nuspi to maximum speed */
+	la t0, 0x10014000
+	la t1, 0x01
+	sw t1, 0(t0)
 
+    /* move _copy_data() to ITCM region */
+	li t0, 0x80000000
+	la t1, _copy_data
+	la t2, _copy_data + 4 * 8
+	call _copy_data
+
+	/* move data from NOR to DDR */
 	li t0, 0xa0000000
 	la t1, sbi
 	la t2, _end_sbi
-	call _copy_data
+
+	/* call faraway function */
+	li t3, 0x80000000
+	//call _copy_data
+	jalr ra, t3, 0
 
 
 	li t0, 0xa0200000
 	la t1, uboot
 	la t2, _end_uboot
-	call _copy_data
 
+	/* call faraway function */
+	li t3, 0x80000000
+	//call _copy_data
+	jalr ra, t3, 0
+
+	/* Goto DDR region */
 	fence
 	fence.i
 	sfence.vma
@@ -30,6 +50,8 @@ _deadloop:
 
 
 /* copy_data(void *dst, void *src, void *end) */
+.align 4
+
 _copy_data:
 _loop:
 	ld t3, 0(t1)
