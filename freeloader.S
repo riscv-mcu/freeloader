@@ -3,6 +3,12 @@
  * Copyright (C) 2020 Nuclei System Technologies
  */
 
+#define OPENSBI_START_BASE	0xa0000000
+#define UBOOT_START_BASE	0xa0200000
+#define FDT_START_BASE		0xa8000000
+
+#define ITCM_START_BASE		0x80000000
+
 .global _start
 .section .text
 _start:
@@ -12,37 +18,54 @@ _start:
 	sw t1, 0(t0)
 
     /* move _copy_data() to ITCM region */
-	li t0, 0x80000000
+	li t0, ITCM_START_BASE
 	la t1, _copy_data
 	la t2, _copy_data + 4 * 8
 	call _copy_data
 
 	/* move data from NOR to DDR */
-	li t0, 0xa0000000
+	li t0, OPENSBI_START_BASE
 	la t1, sbi
 	la t2, _end_sbi
 
 	/* call faraway function */
-	li t3, 0x80000000
+	li t3, ITCM_START_BASE
 	//call _copy_data
 	jalr ra, t3, 0
 
-
-	li t0, 0xa0200000
+	/* U-Boot section */
+	li t0, UBOOT_START_BASE
 	la t1, uboot
 	la t2, _end_uboot
 
 	/* call faraway function */
-	li t3, 0x80000000
+	li t3, ITCM_START_BASE
 	//call _copy_data
 	jalr ra, t3, 0
 
-	/* Goto DDR region */
+	/* FDT section */
+	li t0, FDT_START_BASE
+	la t1, fdt
+	la t2, _end_fdt
+
+	/* call faraway function */
+	li t3, ITCM_START_BASE
+	//call _copy_data
+	jalr ra, t3, 0
+
+	/* Flush cache */
 	fence
 	fence.i
 	sfence.vma
 
-	li t0, 0xa0000000
+
+	li a0, 0 /* hart ID */
+	li a1, 0 /* fdt offset, reserved */
+	li a2, 0 /* Reserved */
+
+	/* Goto OpenSBI */
+
+	li t0, OPENSBI_START_BASE
 	jr t0
 
 _deadloop:
@@ -74,5 +97,11 @@ sbi:
 .type uboot, @object
 uboot:
 .incbin "u-boot.bin"
+
+.section .fdtpayload
+.global fdt
+.type fdt, @object
+fdt:
+.incbin "fdt.dtb"
 
 

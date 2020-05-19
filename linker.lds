@@ -22,11 +22,14 @@ SECTIONS
 
 
 	KEEP (*(.ubootpayload))
+	PROVIDE (end_uboot = .);
 	. = ALIGN(8);
 	PROVIDE (_end_uboot = .);
+
+	KEEP (*(.fdtpayload))
+	. = ALIGN(8);
+	PROVIDE (_end_fdt = .);
   } >flash
-
-
 
 
 }
