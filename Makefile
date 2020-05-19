@@ -1,21 +1,32 @@
+ARCH ?= rv64imac
+ABI ?= lp64
+FW_JUMP_BIN ?= ../opensbi/build/platform/nuclei/ux600/firmware/fw_jump.bin
+UBOOT_BIN ?= ../u-boot/u-boot.bin
+DTB ?= ../u-boot/u-boot.dtb
+CROSS_COMPILE ?= riscv-nuclei-elf-
+
 all: freeloader.bin freeloader.dis
 
-u-boot.bin: ../u-boot/u-boot.bin
-	cp ../u-boot/u-boot.bin ./u-boot.bin
-
-fw_jump.bin: ../opensbi/build/platform/nuclei/ux600/firmware/fw_jump.bin
-	cp ../opensbi/build/platform/nuclei/ux600/firmware/fw_jump.bin .
-
-fdt.dtb: ../u-boot/u-boot.dtb
-	cp ../u-boot/u-boot.dtb ./fdt.dtb
-
 freeloader: u-boot.bin fw_jump.bin  linker.lds freeloader.S fdt.dtb
-	riscv-nuclei-elf-gcc -march=rv64imac -mabi=lp64 freeloader.S -o freeloader -nostartfiles -Tlinker.lds -g
+
+u-boot.bin: $(UBOOT_BIN)
+	cp $< .
+
+fw_jump.bin: $(FW_JUMP_BIN)
+	cp $< .
+
+fdt.dtb: $(DTB)
+	cp $< ./$@
+
+freeloader: u-boot.bin fw_jump.bin  linker.lds freeloader.S
+	$(CROSS_COMPILE)gcc -march=$(ARCH) -mabi=$(ABI) freeloader.S -o freeloader -nostartfiles -Tlinker.lds -g
+
 freeloader.bin: freeloader
-	riscv-nuclei-elf-objcopy freeloader -O binary freeloader.bin
+	$(CROSS_COMPILE)objcopy freeloader -O binary freeloader.bin
 
 freeloader.dis: freeloader
-	riscv-nuclei-elf-objdump -d freeloader > freeloader.dis
+	$(CROSS_COMPILE)objdump -d freeloader > freeloader.dis
+
 .PHONY: clean all
 
 clean:
